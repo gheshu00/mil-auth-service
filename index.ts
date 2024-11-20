@@ -1,18 +1,22 @@
-import express from "express";
+import express, { Express, Request, Response } from "express";
+import dotenv from "dotenv";
+import startServer from "@/controller/server";
 
-const app = express();
+// Route File Import
+import auth from "@/routes/auth";
+
+dotenv.config();
+
+const app: Express = express();
+app.use(express.json());
 const port = 8080;
 
-app.get("/", (req, res) => {
-  // send a simple json response
-  res.json({ message: "Hello World!" });
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
 });
 
-app.get("/api", (req, res) => {
-  // send a simple json response
-  res.json({ message: "Hello World hjj ggi j v riir rij vrirv irn v" });
-});
+//Routes
+app.use("/api", auth);
 
-app.listen(port, () => {
-  console.log(`Listening on port ${port}...`);
-});
+startServer(app, port);
