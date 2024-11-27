@@ -4,8 +4,6 @@ import bcrypt from "bcryptjs";
 import redis from "@/lib/reddis";
 import { generateAccessToken } from "@/lib/jwt";
 
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOGIN_ATTEMPT_WINDOW = 3600;
 
 export const Register = async (req: Request, res: Response) => {
   try {
