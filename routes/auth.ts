@@ -2,25 +2,17 @@ import express from "express";
 import { Login, Logout, Register, Validate } from "@/controller/auth";
 import { getAllRedisData } from "@/controller/redist";
 import { authenticateToken } from "@/middleware/authenticate";
+import { validateSchema } from "@/middleware";
+import { loginSchema, registerSchema } from "@/models/zod";
 
 const router = express.Router();
 
-router.post("/login", Login as express.RequestHandler);
+router.post("/login", validateSchema(loginSchema), Login);
+router.post("/register", validateSchema(registerSchema), Register);
 
-router.post("/register", Register as express.RequestHandler);
+router.get("/validate", authenticateToken, Validate);
+router.get("/logout", authenticateToken, Logout);
 
-router.get(
-  "/validate",
-  authenticateToken as express.RequestHandler,
-  Validate as express.RequestHandler
-);
-
-router.get(
-  "/logout",
-  authenticateToken as express.RequestHandler,
-  Logout as express.RequestHandler
-);
-
-router.get("/redis", getAllRedisData as express.RequestHandler);
+// router.get("/redis", getAllRedisData);
 
 export default router;

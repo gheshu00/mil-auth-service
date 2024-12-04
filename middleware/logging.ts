@@ -1,8 +1,6 @@
 import { Request } from "express";
 import morgan from "morgan";
 
-
-
 const loggingMiddleware = morgan((tokens, req: Request, res) => {
   const logData = {
     service: process.env.SERVICE_NAME || "unknown-service", // Unique identifier for the service
@@ -27,24 +25,21 @@ const loggingMiddleware = morgan((tokens, req: Request, res) => {
 
 // Function to handle logging asynchronously
 async function logToService(logData: any) {
-  const token = process.env.SHARED_TOKEN as string;
-  console.log(token);
+  const token = process.env.SHARED_TOKEN || ("1234gg" as string);
+  const url =
+    process.env.LOGGING_SERVICE_URL || ("http://localhost:3001" as string);
+
   try {
-    const response = await fetch(
-      `${process.env.LOGGING_SERVICE_URL}/api/logs`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-token": token,
-        },
-        body: JSON.stringify(logData),
-      }
-    );
-    const jsonResponse = await response.json(); // Await the JSON response
-    console.log("Log sent successfully:", jsonResponse);
-  } catch (error) {
-    console.error("Failed to send log to logging service:", error);
+    await fetch(`${url}/api/logs`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-token": token,
+      },
+      body: JSON.stringify(logData),
+    });
+  } catch (error: any) {
+    console.error("Failed to send log to logging service:", error?.message);
   }
 }
 

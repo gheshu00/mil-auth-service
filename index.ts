@@ -1,7 +1,7 @@
 import express, { Express } from "express";
 import dotenv from "dotenv";
 import startServer from "@/controller/server";
-import morgan from "morgan";
+// import morgan from "morgan";
 
 // Route File Import
 import auth from "@/routes/auth";

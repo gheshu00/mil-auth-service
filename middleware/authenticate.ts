@@ -1,8 +1,19 @@
-import { jwtVerify, createRemoteJWKSet } from "jose";
+import { jwtVerify } from "jose";
 import { Request, Response, NextFunction } from "express";
 
 // Define your JWT secret or public key
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"; // Use a key string or a remote JWKS endpoint
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+
+// Utility function to handle sending uniform responses
+const sendResponse = (
+  res: Response,
+  status: number,
+  success: boolean,
+  message: string,
+  data?: any
+) => {
+  res.status(status).json({ success, message, data });
+};
 
 export const authenticateToken = async (
   req: Request,
@@ -13,15 +24,13 @@ export const authenticateToken = async (
     // Extract the token from the Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Missing or invalid token" });
+      return sendResponse(res, 401, false, "Missing or invalid token");
     }
 
     const token = authHeader.split(" ")[1];
 
     // Verify the token
-    const { payload, protectedHeader } = await jwtVerify(
+    const { payload } = await jwtVerify(
       token,
       new TextEncoder().encode(JWT_SECRET) // Convert secret to Uint8Array
     );
@@ -32,9 +41,9 @@ export const authenticateToken = async (
     const remainingTime = exp - currentTime;
 
     if (remainingTime <= 0) {
-      return res.status(401).json({
-        success: false,
-        message: "Token has expired",
+      return sendResponse(res, 401, false, "Token has expired", {
+        error: "token_expired",
+        signOut: true,
       });
     }
 
@@ -46,7 +55,7 @@ export const authenticateToken = async (
     next(); // Pass control to the next middleware/handler
   } catch (err: any) {
     console.error("Token verification failed:", err.message);
-    return res.status(401).json({ success: false, message: "Invalid token" });
+    return sendResponse(res, 401, false, "Invalid token", { sys_error: true });
   }
 };
 

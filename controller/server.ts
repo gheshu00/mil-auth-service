@@ -6,7 +6,7 @@ async function startServer(app: any, port: any) {
 
   await mongoose
     .connect(uri, {
-      dbName: "GEO-API",
+      dbName: "MIL-AUTH-API",
     })
     .then(() => {
       console.log("Connected to MongoDB");

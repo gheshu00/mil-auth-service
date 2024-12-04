@@ -2,8 +2,18 @@ import { Request, Response } from "express";
 import User from "@/models/user";
 import bcrypt from "bcryptjs";
 import redis from "@/lib/reddis";
-import { generateAccessToken } from "@/lib/jwt";
+import { generateAccessToken, generateRefreshToken } from "@/lib/jwt";
 
+// Utility function to handle sending uniform responses
+const sendResponse = (
+  res: Response,
+  status: number,
+  success: boolean,
+  message: string,
+  data?: any
+) => {
+  res.status(status).json({ success, message, data });
+};
 
 export const Register = async (req: Request, res: Response) => {
   try {
@@ -11,27 +21,38 @@ export const Register = async (req: Request, res: Response) => {
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists." });
+      return sendResponse(res, 400, false, "User already exists.");
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = new User({
-      email,
-      password: hashedPassword,
-      name,
-    });
-
+    const newUser = new User({ email, password: hashedPassword, name });
     await newUser.save();
 
-    const token = await generateAccessToken(newUser._id.toString());
+    const userId = newUser._id as string;
 
+    // Generate JWT tokens
+    const accessToken = await generateAccessToken(userId);
+    const refreshToken = generateRefreshToken(userId);
+
+    // Store refresh token in Redis
+    const refreshKey = `${newUser._id}-refresh`;
+    await redis.set(refreshKey, refreshToken, "EX", 30 * 24 * 60 * 60);
+
+    // Clear previous login attempts from Redis
     const redisKey = `login_attempts:${email}`;
     await redis.del(redisKey);
 
-    res.json({ success: true, token, user: newUser });
+    sendResponse(res, 201, true, "Registration successful", {
+      accessToken,
+      refreshToken,
+      user: newUser,
+    });
   } catch (e: any) {
-    res.status(500).json({ success: false, message: "Registration Failed" });
+    console.error(e);
+    sendResponse(res, 500, false, "Registration failed", {
+      sys_error: true,
+      message: e.message,
+    });
   }
 };
 
@@ -40,122 +61,109 @@ export const Login = async (req: Request, res: Response) => {
 
   try {
     const user: any = await User.findOne({ email });
-
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return sendResponse(res, 404, false, "User not found");
     }
 
     if (user.banned) {
-      return res.status(403).json({
-        success: false,
-        message: "Your Account has been banned",
+      return sendResponse(res, 403, false, "Your account has been banned", {
         action: "Banned",
       });
     }
 
-    // Redis Key Set Up
+    // Check login attempts
     const key = `log-${email}`;
     let value = await redis.get(key);
 
-    // Check if value is not null before parsing
     if (value && parseInt(value, 10) >= 5) {
-      return res
-        .status(429)
-        .json({ success: false, message: "Too many login attempts" });
+      return sendResponse(res, 429, false, "Too many login attempts");
     }
 
     let count = parseInt(value || "0", 10);
-
     const isPassValid = await bcrypt.compare(password, user.password);
 
     if (!isPassValid) {
       count += 1;
       await redis.set(key, count.toString(), "EX", 3600); // Optional expiration
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid Password" });
+      return sendResponse(res, 401, false, "Invalid password");
     }
 
     // Clear failed attempts on successful login
     await redis.del(key);
 
-    const userId = String(user._id);
+    const accessToken = await generateAccessToken(user._id.toString());
+    const refreshToken = generateRefreshToken(user._id.toString());
 
-    // Generate JWT token
-    const token = await generateAccessToken(userId);
+    // Store refresh token in Redis
+    const refreshKey = `${user._id}-refresh`;
+    await redis.set(refreshKey, refreshToken, "EX", 30 * 24 * 60 * 60);
 
-    res.status(200).json({ success: true, user, token });
+    sendResponse(res, 200, true, "Login successful", {
+      accessToken,
+      refreshToken,
+      user,
+    });
   } catch (e: any) {
     console.error(e);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
+    sendResponse(res, 500, false, "Internal server error", { sys_error: true });
   }
 };
 
 export const Validate = async (req: Request, res: Response) => {
   try {
+    const { exp, id: userId } = req.tokenPayload as { exp: number; id: string };
     const token = req.token;
-    const { id: userId } = req.tokenPayload as { id: string };
-    const payload = req.tokenPayload;
 
-    // console.log({ token: token, payload: payload });
-
-    const key = `blacklist-${token}`;
-    const isBlackListed = await redis.get(key);
-
-    if (isBlackListed) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorised",
-        error: "blacklisted",
+    // Check if token is blacklisted
+    const isBlacklisted = await redis.get(`blacklist-${token}`);
+    if (isBlacklisted) {
+      return sendResponse(res, 401, false, "Token is blacklisted", {
+        error: "token_blacklisted",
+        signOut: true,
       });
     }
 
-    // Fetch User
-    const user = await User.findById(userId);
+    // Check if the token has expired
+    const now = Math.floor(Date.now() / 1000);
+    if (exp < now) {
+      return sendResponse(res, 401, false, "Token expired", {
+        error: "token_expired",
+        signOut: true,
+      });
+    }
+
+    // Fetch user data, excluding the password
+    const user = await User.findById(userId).select("-password");
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorised",
-        error: "no user",
-        userId,
+      return sendResponse(res, 401, false, "Unauthorized, user not found", {
+        error: "no_user",
+        signOut: true,
       });
     }
 
-    res.status(200).json({ success: true, user });
+    // Token is valid, respond with user info
+    sendResponse(res, 200, true, "Token validated successfully", { user });
   } catch (e: any) {
-    res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
+    console.error(e);
+    sendResponse(res, 500, false, "Internal server error", { sys_error: true });
   }
 };
 
 export const Logout = async (req: Request, res: Response) => {
   try {
-    const token = req.token;
-    const tokenTime = req.tokenRemainingTime;
+    const { token, tokenRemainingTime } = req;
 
-    if (!token || tokenTime == null) {
-      return res.status(400).json({
-        success: false,
-        message: "Unauthorised",
-      });
+    if (!token || tokenRemainingTime == null) {
+      return sendResponse(res, 400, false, "Unauthorized");
     }
 
-    // Blacklist Token in Redis
     const key = `blacklist-${token}`;
-    await redis.set(key, "blacklisted", "EX", tokenTime);
+    await redis.set(key, "blacklisted", "EX", tokenRemainingTime);
 
-    res.status(200).json({
-      success: true,
-      message: "Successfully logged out",
-    });
+    sendResponse(res, 200, true, "Successfully logged out", { signOut: true });
   } catch (e: any) {
-    res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
+    console.error(e);
+    sendResponse(res, 500, false, "Internal server error", { sys_error: true });
   }
 };
+
