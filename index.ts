@@ -6,7 +6,7 @@ import startServer from "@/controller/server";
 // Route File Import
 import auth from "@/routes/auth";
 import { limiter } from "./controller/limiter";
-import loggingMiddleware from "./middleware/logging";
+import loggingMiddleware from "@/middleware/logging";
 
 dotenv.config();
 
