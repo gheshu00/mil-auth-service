@@ -2,7 +2,7 @@ import express, { Express } from "express";
 import dotenv from "dotenv";
 
 // Route File Import
-import auths from "./routes/auths";
+import auths from "./routes/auth";
 import { limiter } from "./controller/limiter";
 import loggingMiddleware from "./middleware/logging";
 import startServer from "./controller/server";
