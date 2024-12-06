@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import User from "@/models/user";
+import User from "../models/user";
 import bcrypt from "bcryptjs";
-import redis from "@/lib/reddis";
-import { generateAccessToken, generateRefreshToken } from "@/lib/jwt";
+import redis from "../lib/reddis";
+import { generateAccessToken, generateRefreshToken } from "../lib/jwt";
 
 // Utility function to handle sending uniform responses
 const sendResponse = (

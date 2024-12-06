@@ -1,9 +1,9 @@
 import express from "express";
-import { Login, Logout, Register, Validate } from "@/controller/auth";
-import { getAllRedisData } from "@/controller/redist";
-import { authenticateToken } from "@/middleware/authenticate";
-import { validateSchema } from "@/middleware";
-import { loginSchema, registerSchema } from "@/models/zod";
+import { Login, Logout, Register, Validate } from "../controller/auth";
+import { getAllRedisData } from "../controller/redist";
+import { authenticateToken } from "../middleware/authenticate";
+import { validateSchema } from "../middleware";
+import { loginSchema, registerSchema } from "../models/zod";
 
 const router = express.Router();
 

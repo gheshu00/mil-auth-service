@@ -1,4 +1,4 @@
-import redis from "@/lib/reddis";
+import redis from "../lib/reddis";
 import { Request, Response } from "express";
 
 /**

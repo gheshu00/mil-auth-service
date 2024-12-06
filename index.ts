@@ -1,12 +1,13 @@
 import express, { Express } from "express";
 import dotenv from "dotenv";
-import startServer from "@/controller/server";
+import startServer from "./controller/server";
+
 // import morgan from "morgan";
 
 // Route File Import
-import auth from "@/routes/auth";
+import auth from "./routes/auth";
 import { limiter } from "./controller/limiter";
-import loggingMiddleware from "@/middleware/logging";
+import loggingMiddleware from "./middleware/logging";
 
 dotenv.config();
 
