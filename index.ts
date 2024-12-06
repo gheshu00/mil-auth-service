@@ -2,7 +2,7 @@ import express, { Express } from "express";
 import dotenv from "dotenv";
 
 // Route File Import
-import { auth } from "./routes/auth.ts";
+import auths from "./routes/auths";
 import { limiter } from "./controller/limiter";
 import loggingMiddleware from "./middleware/logging";
 import startServer from "./controller/server";
@@ -25,6 +25,6 @@ app.use(loggingMiddleware);
 app.use(limiter);
 
 //Routes
-app.use("/api", auth);
+app.use("/api", auths);
 
 startServer(app, port);
