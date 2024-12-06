@@ -18,6 +18,7 @@
     "types": [
       "bun-types" // add Bun global
     ],
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
     }

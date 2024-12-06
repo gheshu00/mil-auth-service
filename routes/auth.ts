@@ -7,12 +7,14 @@ import { loginSchema, registerSchema } from "../models/zod";
 
 const router = express.Router();
 
-router.post("/login", validateSchema(loginSchema), Login);
-router.post("/register", validateSchema(registerSchema), Register);
+const auth = router;
 
-router.get("/validate", authenticateToken, Validate);
-router.get("/logout", authenticateToken, Logout);
+auth.post("/login", validateSchema(loginSchema), Login);
+auth.post("/register", validateSchema(registerSchema), Register);
+
+auth.get("/validate", authenticateToken, Validate);
+auth.get("/logout", authenticateToken, Logout);
 
 // router.get("/redis", getAllRedisData);
 
-export default router;
+export { auth };
