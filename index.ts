@@ -11,7 +11,7 @@ dotenv.config();
 
 const app: Express = express();
 app.use(express.json());
-const port = 8080;
+const port = process.env.PORT || 8081;
 
 // app.use(morgan("tiny"));
 
