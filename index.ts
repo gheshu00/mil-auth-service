@@ -25,6 +25,6 @@ app.use(loggingMiddleware);
 app.use(limiter);
 
 //Routes
-app.use("/auth", auth);
+app.use("/api", auth);
 
 startServer(app, port);
