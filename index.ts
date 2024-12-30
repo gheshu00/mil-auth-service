@@ -23,8 +23,10 @@ app.use((req, res, next) => {
 // Middleware
 app.use(loggingMiddleware);
 
+// app.use('/api');
+
 
 //Routes
-app.use("/api", auth);
+app.use("/api/auth", auth);
 
 startServer(app, port);
