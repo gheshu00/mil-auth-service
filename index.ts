@@ -22,7 +22,7 @@ app.use((req, res, next) => {
 
 // Middleware
 app.use(loggingMiddleware);
-app.use(limiter);
+
 
 //Routes
 app.use("/api", auth);
