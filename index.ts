@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 
 // Route File Import
 import auth from "./routes/auth";
-import { limiter } from "./controller/limiter";
+// import { limiter } from "./controller/limiter";
 import loggingMiddleware from "./middleware/logging";
 import startServer from "./controller/server";
 
@@ -27,6 +27,6 @@ app.use(loggingMiddleware);
 
 
 //Routes
-app.use("/api/auth", auth);
+app.use("/api", auth);
 
 startServer(app, port);
