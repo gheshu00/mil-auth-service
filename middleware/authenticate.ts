@@ -1,71 +1,26 @@
-import { jwtVerify } from "jose";
 import { Request, Response, NextFunction } from "express";
+import { verifyToken } from "../utils/jwt"; // Import the new token verification function
+import { sendResponse } from "../utils/customRes";
 
-// Define your JWT secret or public key
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
-
-// Utility function to handle sending uniform responses
-const sendResponse = (
-  res: Response,
-  status: number,
-  success: boolean,
-  message: string,
-  data?: any
-) => {
-  res.status(status).json({ success, message, data });
-};
-
-export const authenticateToken = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    // Extract the token from the Authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return sendResponse(res, 401, false, "Missing or invalid token");
+// Middleware to verify token
+export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
+    const authHeader = req.headers["authorization"];
+    if (!authHeader?.startsWith("Bearer ")) {
+        return sendResponse(res, 401, false, "Authorization token is required or invalid.", {logout: true});
     }
 
     const token = authHeader.split(" ")[1];
-
-    // Verify the token
-    const { payload } = await jwtVerify(
-      token,
-      new TextEncoder().encode(JWT_SECRET) // Convert secret to Uint8Array
-    );
-
-    // Calculate remaining expiration time
-    const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
-    const exp = payload.exp as number; // Ensure `exp` exists in the payload
-    const remainingTime = exp - currentTime;
-
-    if (remainingTime <= 0) {
-      return sendResponse(res, 401, false, "Token has expired", {
-        error: "token_expired",
-        signOut: true,
-      });
+    if (!token) {
+        return sendResponse(res, 401, false, "Authorization token is missing.", {logout: true});
     }
 
-    // Attach data to the request object
-    req.tokenPayload = payload; // The decoded payload
-    req.token = token; // The raw token
-    req.tokenRemainingTime = remainingTime; // Remaining time in seconds
-
-    next(); // Pass control to the next middleware/handler
-  } catch (err: any) {
-    console.error("Token verification failed:", err.message);
-    return sendResponse(res, 401, false, "Invalid token", { sys_error: true });
-  }
+    try {
+        const decoded = await verifyToken(token);
+        req.userId = decoded.id as string;
+        req.role = decoded.role as string
+        next();
+    } catch (error) {
+        console.error("Token verification failed:", error);
+        return sendResponse(res, 403, false, "Invalid or expired token.");
+    }
 };
-
-// Extend Express Request to include token-related properties
-declare global {
-  namespace Express {
-    interface Request {
-      tokenPayload?: Record<string, any>; // Payload from the JWT
-      token?: string; // The raw token
-      tokenRemainingTime?: number; // Remaining time in seconds
-    }
-  }
-}

@@ -1,21 +1,10 @@
-import mongoose from "mongoose";
+import { createDefaultRoles } from "../models/role";
+import connectDB from "../utils/db";
 
-
-async function startServer(app: any, port: any) {
-  const uri: string = process.env.DB_URI as string;
-
-  await mongoose
-    .connect(uri, {
-      dbName: "MIL-AUTH-API",
-    })
-    .then(() => {
-      console.log("Connected to MongoDB");
-    })
-    .catch((error: any) => console.log(error));
-
-  app.listen(port, () => {
-    console.log(`[server]: Server is running at http://localhost:${port}`);
-  });
+export async function startServer(app: any, port: any) {
+    await connectDB();
+    await createDefaultRoles();
+    app.listen(port, () => {
+        console.log(`Server running on port ${port}`);
+    });
 }
-
-export default startServer;

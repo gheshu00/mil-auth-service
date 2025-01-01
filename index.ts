@@ -1,29 +1,33 @@
-import express, { Express } from "express";
+import express, { NextFunction, Request, Response } from 'express';
 import dotenv from "dotenv";
-
-// Route File Import
+import { connectDB } from './utils/db';
+import { NotFoundError } from './utils/customError';
+import { errorHandler } from './middleware/errorHandler';
+import { startServer } from './controller/server';
 import auth from "./routes/auth";
-// import { limiter } from "./controller/limiter";
-import loggingMiddleware from "./middleware/logging";
-import startServer from "./controller/server";
+import loggingMiddleware from './middleware/logging';
 
 dotenv.config();
 
-const app: Express = express();
+const app = express();
+const PORT = 3000;
+
 app.use(express.json());
-const port = process.env.PORT || 8088;
-
-// app.use(morgan("tiny"));
-
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
-});
-
-// Middleware
 app.use(loggingMiddleware);
+
+app.get('/', (req: Request, res: Response) => {
+  connectDB();
+  res.send('Hello, Express with TypeScript and Bun!');
+});
 
 //Routes
 app.use("/api", auth);
 
-startServer(app, port);
+app.use((req: Request, res: Response, next: NextFunction) => {
+  next(new NotFoundError());
+});
+
+app.use(errorHandler);
+
+startServer(app, PORT);
+
